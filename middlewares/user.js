@@ -1,12 +1,12 @@
 import User from "../models/User.js";
-
-const SECRET_TOKEN = process.env.SECRET_TOKEN;
+import jwt from "jsonwebtoken";
 
 export const checkUserDoesNotExist = async (req, res, next) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
   user ? res.status(401).json({ message: "User already exists" }) : next();
 };
+
 export const checkUserExists = async (req, res, next) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
@@ -19,23 +19,21 @@ export const checkUserExists = async (req, res, next) => {
   }
 };
 
-// export const authorize = (req, res, next) => {
-//   const authHeader = req.headers.authorization;
-//   console.log(req.headers)
+export const authorize = (req, res, next) => {
+  const secretToken = process.env.SECRET_TOKEN;
+  const authHeader = req.headers.authorization;
 
-//   if (authHeader) {
-//     const token = authHeader.split(" ")[1];
-//     console.log(token)
+  if (!authHeader) {
+    return res.status(401).json({ message: "No token provided" }); // 401 Unauthorized
+  }
 
-//     jwt.verify(token, SECRET_TOKEN, (err, user) => {
-//       if (err) {
-//         return res.sendStatus(403);
-//       }
+  const token = authHeader.split(" ")[1];
 
-//       req.user = user;
-//       next();
-//     });
-//   } else {
-//     res.sendStatus(401);
-//   }
-// };
+  jwt.verify(token, secretToken, (error, decoded) => { // jwt.verify decodes the token and verifies the signature
+    if (error) {
+      res.status(403).json({ message: "Unauthorized" }); // 403 Forbidden
+    } else {
+      next();
+    }
+  });
+};
